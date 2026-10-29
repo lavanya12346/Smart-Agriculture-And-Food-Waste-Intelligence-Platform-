@@ -34,6 +34,12 @@ const roles = [
 
 type UserRole = (typeof roles)[number]['value'];
 
+const demoAccounts: Record<UserRole, { username: string; password: string }> = {
+  admin: { username: 'admin', password: 'admin123' },
+  canteen_manager: { username: 'canteen', password: 'canteen123' },
+  farmer_buyer: { username: 'farmer', password: 'farmer123' },
+};
+
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
@@ -49,6 +55,13 @@ function App() {
   const [procurement, setProcurement] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleRoleChange = (role: UserRole) => {
+    setSelectedRole(role);
+    setUsername(demoAccounts[role].username);
+    setPassword(demoAccounts[role].password);
+    setError('');
+  };
 
   const metrics = useMemo(() => {
     if (!dashboard) return [] as { label: string; value: string; color: string }[];
@@ -167,7 +180,7 @@ function App() {
           </div>
           <div className="role-grid">
             {roles.map((role) => (
-              <button key={role.value} className={selectedRole === role.value ? 'role-btn active' : 'role-btn'} onClick={() => setSelectedRole(role.value)}>
+              <button key={role.value} className={selectedRole === role.value ? 'role-btn active' : 'role-btn'} onClick={() => handleRoleChange(role.value)}>
                 {role.label}
               </button>
             ))}
