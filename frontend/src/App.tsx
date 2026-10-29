@@ -30,11 +30,13 @@ const roles = [
   { label: 'Admin', value: 'admin' },
   { label: 'Canteen Manager', value: 'canteen_manager' },
   { label: 'Farmer / Buyer', value: 'farmer_buyer' },
-];
+] as const;
+
+type UserRole = (typeof roles)[number]['value'];
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('admin');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [dashboard, setDashboard] = useState<{ summary: DashboardSummary; trend_series: TrendPoint[]; recommendations: string[] } | null>(null);
@@ -113,7 +115,10 @@ function App() {
       });
       if (!response.ok) throw new Error('Invalid username/password');
       const data = await response.json();
-      if (data.user?.role) setSelectedRole(data.user.role);
+      if (data.user?.role !== selectedRole) {
+        const accountRole = roles.find((role) => role.value === data.user?.role);
+        throw new Error(`This account belongs to ${accountRole?.label ?? 'a different'} role. Select that role and try again.`);
+      }
       setLoggedIn(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -190,32 +195,49 @@ function App() {
     );
   }
 
+  const isAdmin = selectedRole === 'admin';
+  const isCanteenManager = selectedRole === 'canteen_manager';
+  const isFarmerBuyer = selectedRole === 'farmer_buyer';
+
   return (
     <div className="app-shell">
       <header className="topbar">
         <div>
           <h2>AgriWaste Intelligence</h2>
-          <small>Shared agri-to-canteen demand and pricing view</small>
+          <small>
+            {isAdmin && 'Administrator overview'}
+            {isCanteenManager && 'Canteen operations and food waste'}
+            {isFarmerBuyer && 'Crop prices and procurement opportunities'}
+          </small>
         </div>
         <button className="secondary-btn" onClick={() => setLoggedIn(false)}>Logout</button>
       </header>
 
       <main className="main-grid">
-        <section className="panel hero-panel">
-          <div className="section-header">
-            <h3>Mission summary</h3>
-          </div>
-          <div className="stat-grid">
-            {metrics.map((item) => (
-              <div key={item.label} className="stat-card" style={{ borderTop: `4px solid ${item.color}` }}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
+        {isFarmerBuyer ? (
+          <section className="panel hero-panel">
+            <div className="section-header">
+              <h3>Farmer and buyer marketplace</h3>
+            </div>
+            <p>Compare recent crop prices and forecasts, then review upcoming ingredient requirements from canteens.</p>
+          </section>
+        ) : (
+          <section className="panel hero-panel">
+            <div className="section-header">
+              <h3>{isAdmin ? 'Mission summary' : 'Canteen performance'}</h3>
+            </div>
+            <div className="stat-grid">
+              {metrics.map((item) => (
+                <div key={item.label} className="stat-card" style={{ borderTop: `4px solid ${item.color}` }}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-        <section className="panel">
+        {!isFarmerBuyer && <section className="panel">
           <div className="section-header">
             <h3>Food waste trends</h3>
           </div>
@@ -237,18 +259,18 @@ function App() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </section>
+        </section>}
 
-        <section className="panel">
+        {!isFarmerBuyer && <section className="panel">
           <div className="section-header">
             <h3>Predicted demand and waste</h3>
           </div>
           <div className="recommendation-list">
             {dashboard?.recommendations.map((item) => <div key={item} className="recommendation-item">{item}</div>)}
           </div>
-        </section>
+        </section>}
 
-        <section className="panel">
+        {(isAdmin || isCanteenManager) && <section className="panel">
           <div className="section-header">
             <h3>Meal entry</h3>
           </div>
@@ -269,9 +291,9 @@ function App() {
             </div>
             <button type="submit" className="primary-btn">Save meal record</button>
           </form>
-        </section>
+        </section>}
 
-        <section className="panel">
+        {(isAdmin || isFarmerBuyer) && <section className="panel">
           <div className="section-header">
             <h3>Crop market prediction</h3>
           </div>
@@ -313,7 +335,7 @@ function App() {
               </div>
             </>
           ) : <p>Loading crop prediction...</p>}
-        </section>
+        </section>}
 
         <section className="panel">
           <div className="section-header">
@@ -345,7 +367,7 @@ function App() {
           </div>
         </section>
 
-        <section className="panel">
+        {!isFarmerBuyer && <section className="panel">
           <div className="section-header">
             <h3>Waste record log</h3>
           </div>
@@ -373,7 +395,7 @@ function App() {
               </tbody>
             </table>
           </div>
-        </section>
+        </section>}
       </main>
     </div>
   );
