@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -223,3 +225,8 @@ def get_procurement_plans(db: Session = Depends(get_db)):
 def list_markets(db: Session = Depends(get_db)):
     markets = db.query(Market).all()
     return [{"id": m.id, "name": m.name, "location": m.location, "currency": m.currency} for m in markets]
+
+
+frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
